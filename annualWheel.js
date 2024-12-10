@@ -25,6 +25,9 @@ if (typeof module === 'object' && typeof module.exports === 'object') {
 
 //begin annual code
 
+const MARGIN = 10;
+const CORNER_RADIUS = 10;
+
 const spiralGraph = (configureJson, selector) => {
 	///
 	let startDate = configureJson.start;
@@ -66,6 +69,8 @@ const spiralGraph = (configureJson, selector) => {
 			ringStatus[type.type] = {
 				show: type?.show ?? false,
 				category: item?.category,
+				...(type?.margin ? {margin: type?.margin} : null),
+				...(type?.round ? {round: type?.round} : null),
 				color: type?.color
 			}
 		});
@@ -226,14 +231,15 @@ const spiralGraph = (configureJson, selector) => {
 	}
 
 
-	const partition = (data) => {
+	const partition = (data, padding = 0) => {
 		const root = d3.hierarchy(data)
 			.sum(d => {
 				if(d?.value) return d?.value;
 				else return 0;
 			});
 		return d3.partition()
-			.size([2 * Math.PI , 0])
+			.size([2 * Math.PI - 0.15, 0])
+			.padding(padding)
 			(root);
 	}
 
@@ -334,6 +340,8 @@ const spiralGraph = (configureJson, selector) => {
 				"text-direction": item['text-direction'],
 				show: ringStatus[type]?.show,
 				color: ringStatus[type]?.color,
+				...(ringStatus[type].margin ? {margin: ringStatus[type].margin} : null),
+				...(ringStatus[type].round ? {round: ringStatus[type].round} : null),
 				data: true,
 				dataIndex: items.length + dataContentRings.length,
 				x0,
@@ -521,16 +529,41 @@ const spiralGraph = (configureJson, selector) => {
 			a = a + Math.PI - startSpiralAngle;
 			return radius * Math.cos(a)
 	}
+
+	const arc2 = ( {startAngle, endAngle, startInnerRadius, endInnerRadius, startOuterRadius, endOuterRadius} ) => {
+		const polarToCartesian = (angle, radius) => ({
+			x: radius * Math.cos(angle),
+			y: radius * Math.sin(angle),
+		});
+
+		const outerStart = polarToCartesian(startAngle, startOuterRadius);
+		const outerEnd = polarToCartesian(endAngle, endOuterRadius);
+
+		const innerStart = polarToCartesian(startAngle, startInnerRadius);
+		const innerEnd = polarToCartesian(endAngle, endInnerRadius);
+
+		return `
+    M ${innerStart.x},${innerStart.y}
+    A ${startInnerRadius},${startInnerRadius} 0 0,1 ${innerEnd.x},${innerEnd.y}
+    L ${outerEnd.x},${outerEnd.y}
+    A ${endOuterRadius},${endOuterRadius} 0 0,0 ${outerStart.x},${outerStart.y}
+    Z
+  `;
+	}
+
 	const arc1 = (d) => {
+
+		const margin = d.margin ? MARGIN : 0;
+
 		let startAngle = d.x0;
 		let endAngle = d.x1;
 		let radius = getRadius(d);
 		let pad = getPad(d);
 
-		let startInnerRadius = radius + scaleLinear(startAngle) * (radius - holeRadius);
-		let endInnerRadius = radius + scaleLinear(endAngle) * (radius - holeRadius);
-		let startOuterRadius = pad + radius + scaleLinear(startAngle) * (radius - holeRadius + pad);
-		let endOuterRadius = pad + radius + scaleLinear(endAngle) * (radius - holeRadius + pad);
+		let startInnerRadius = margin + radius + scaleLinear(startAngle) * (radius - holeRadius);
+		let endInnerRadius = margin + radius + scaleLinear(endAngle) * (radius - holeRadius);
+		let startOuterRadius = -1 * margin + pad + radius + scaleLinear(startAngle) * (radius - holeRadius + pad);
+		let endOuterRadius = -1 * margin + pad + radius + scaleLinear(endAngle) * (radius - holeRadius + pad);
 		let arcAngle = endAngle - startAngle;
 
 		const insideOut = (d?.data?.insideOut || d?.insideOut);
@@ -554,11 +587,6 @@ const spiralGraph = (configureJson, selector) => {
 			Z`;
 		}
 		if(!d?.visible) return '';
-		
-
-		
-		
-		
 
 		const controlPointCount = Math.ceil(arcAngle / (Math.PI / 36))
 
@@ -575,7 +603,7 @@ const spiralGraph = (configureJson, selector) => {
 		};
 		const innerControlPoints = [[arcData.x1, arcData.y1]];
 		const outerControlPoints = [[arcData.x3, arcData.y3]];
-		
+
 		for (let i = 1; i < controlPointCount; i++) {
 		// Calculate the current angle
 		const angle = startAngle + arcAngle * 1.0 / controlPointCount * i;
@@ -584,11 +612,11 @@ const spiralGraph = (configureJson, selector) => {
 			const innerDistance =  radius + scaleLinear(angle) * (radius - holeRadius);
 			const outerDistance =  radius + pad + scaleLinear(outerAngule) * (radius - holeRadius + pad);
 			// Calculate the x and y coordinates of the control point
-			const innerX = xPos(angle, innerDistance)
-			const innerY = yPos(angle, innerDistance)
+			const innerX = xPos(angle, innerDistance + margin)
+			const innerY = yPos(angle, innerDistance + margin)
 
-			const outerX = xPos(outerAngule, outerDistance)
-			const outerY = yPos(outerAngule, outerDistance);
+			const outerX = xPos(outerAngule, outerDistance - margin)
+			const outerY = yPos(outerAngule, outerDistance - margin);
 			// Add the control point to the array
 			innerControlPoints.push([innerX, innerY])
 			outerControlPoints.push([outerX, outerY])
@@ -634,6 +662,9 @@ const spiralGraph = (configureJson, selector) => {
 		},'')
 
 		return start + ' ' + side1 + ' ' + side2 + ' ' + side3 + ' Z'
+		// return d?.type?.includes('Internal HR')
+		// 	? arc2({startAngle, endAngle, startInnerRadius, endInnerRadius, startOuterRadius, endOuterRadius})
+		// 	: start + ' ' + side1 + ' ' + side2 + ' ' + side3 + ' Z'
 	}
 
 	const svg = d3.select(selector)
@@ -671,7 +702,7 @@ const spiralGraph = (configureJson, selector) => {
 		.attr("id", (d,index)=>{
 			return `arc-path${index}`;
 		})
-		.attr("fill", d => { 
+		.attr("fill", d => {
 			const type = d?.data?.type || d?.type;
 			if(type == "shadow") return "url(#myGradient)"
 			if(type != 'background'){
@@ -682,11 +713,19 @@ const spiralGraph = (configureJson, selector) => {
 				return "#FFFFFF36"
 			}
 		})
-		.attr("fill-opacity", d => arcVisible(d.current) ? 0.9 : 0)
+		// .attr("fill-opacity", d => arcVisible(d.current) ? 0.9 : 0)
+		// .attr("stroke-opacity", d => arcVisible(d.current) ? 0.9 : 0)
 		.attr("pointer-events", d => arcVisible(d.current) ? "auto" : "none")
 		.attr("d", d => arc1(d))
-		.attr("stroke", d => { const type = d?.type || d?.data?.type; if(type =='shadow') return '#AAAAAA'; return arcVisible(d.current) && d.current.depth > 0 ? "#AAAAAA" : "none"})
-		.attr("stroke-width", d => {   return 0.2})
+		.attr("stroke", d => {
+			const type = d?.type || d?.data?.type;
+			if(type =='shadow') return '#AAAAAA';
+			return arcVisible(d.current) && d.current.depth > 0 ? "#AAAAAA" :
+				d?.type?.includes('Internal HR') ? (d?.color || "none") : "none"
+		})
+		.attr("stroke-width", d => d?.round ? CORNER_RADIUS :0.2)
+		.attr("stroke-linecap", d => d?.round ? "round" : "butt")
+		.attr("stroke-linejoin", d => d?.round ? "round" : "butt")
 		.attr("class", d => {
 			const type = d?.data?.type || d?.type;
 			if(type == 'year')
@@ -772,10 +811,11 @@ const spiralGraph = (configureJson, selector) => {
 		// .attr("x", 5)   //Move the text from the start angle of the arc
 		.attr("dy", (d)=>{
 			const textDirection = d['text-direction'] || d.data['text-direction']
-			if(textDirection == 'inside-out') return 
+			if(textDirection == 'inside-out') return
+			const margin = d.margin ? MARGIN : 0;
 			if((d.x0 + d.x1) / 2 > 90 * Math.PI/180 && (d.x0 + d.x1) / 2 < 270 * Math.PI/180){
-				return 0.5 * getPad(d);
-			}else return -0.5 * getPad(d)
+				return 0.5 * getPad(d) + margin;
+			}else return -0.5 * getPad(d) + margin
 		})
 		.classed("dataItem", d => d?.data == true ? true : false)
 
