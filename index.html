@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Demo</title>
+	<script src="https://d3js.org/d3.v4.min.js"></script>
+	<script type = "text/JavaScript" src = "https://MomentJS.com/downloads/moment.js"></script>
+	
+	<!-- <script src="../d3.js"></script>
+	<script type = "text/JavaScript" src = "../moment.js"></script> -->
+	<link rel="stylesheet" href="annualWheel.css"/>
+	<style>
+	</style>
+</head>
+<body>
+	<div class="diagram-container">
+		<svg w="400" h="400" class="diagram diagram-annualwheel"></svg>
+	</div>
+	
+</body>
+	<script src="./annualWheel.js"></script>
+	<script type="text/javascript">
+
+	var configureJson = {
+		start: "2023-6-1",
+		end: "2023-9-30",
+		innerHoleRadius: 1/5, // means width * 9 / 40 
+		rings: {
+			"date":{
+				'year': {
+					'category': 'dateRing', // types: 'year', 'quarter', 'month', 'day'
+					'type': 'year',
+					'show': true
+				},
+				'quarter':{
+					'category': 'dateRing', // types: 'year', 'quarter', 'month', 'day'
+					'type': 'quarter',
+					'show': true
+				},
+				'month':{
+					'category': 'dateRing', // types: 'year', 'quarter', 'month', 'day'
+					'type': 'month',
+					'show': true
+				},
+				'week':{
+					'category': 'dateRing', // types: 'year', 'quarter', 'month', 'day'
+					'type': 'week',
+					'show': true
+				},
+				'day':{
+					'category': 'dateRing', // types: 'year', 'quarter', 'month', 'day'
+					'type': 'day',
+					'show': true
+				},
+				
+			},
+			"data": {
+				"dataRings": [
+					{
+						"category": 'Internal HR',
+						"types": [
+							{
+								"type": "Internal HR First",
+								"show": true,
+								"color": "blue",
+							},
+							{
+								"type": "Internal HR Second",
+								"show": true,
+								"color": "#FF0000",
+							}
+						]
+					},
+					{
+						"category": 'Outer HR',
+						"types": [
+							{
+								"type": "Outer HR First",
+								"show": true,
+								"color": "green",
+							},
+							{
+								"type": "Outer HR Second",
+								"show": true,
+								"color": "yellow",
+							}
+						]
+					}
+				],
+				"items": [
+						{
+							"type": "Internal HR First",
+							"title": "Inter 1",
+							"start": "2023-09-06",
+							"end": "2023-09-09", 
+							// "text-direction": "inside-out"
+						},
+						{
+							"type": "Internal HR Second",
+							"title": "Inter 2",
+							"start": "2023-9-22",
+							"end": "2023-9-25" ,
+							"text-direction": "inside-out"
+						},
+						{
+							"type": "Outer HR First",
+							"title": "outer 1",
+							"start": "2023-07-21",
+							"end": "2023-07-23" ,
+							"text-direction": "inside-out"
+						},
+						{
+							"type": "Outer HR First",
+							"title": "outer 2",
+							"start": "2023-07-06",
+							"end": "2023-07-09" ,
+							"text-direction": "inside-out"
+						},
+						{
+							"type": "Outer HR Second",
+							"title": "Oper 1",
+							"start": "2023-07-06",
+							"end": "2023-07-09" ,
+							"text-direction": "inside-out"
+						},
+						{
+							"type": "Outer HR Second",
+							"title": "Oper 1",
+							"start": "2023-07-12",
+							"end": "2023-7-13" ,
+							"text-direction": "inside-out"
+						}
+				]
+			}	
+		}
+	}
+	
+	spiralGraph(configureJson, ".diagram-annualwheel");
+</script>
+</script>
+</html>
