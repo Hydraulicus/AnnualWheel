@@ -30,6 +30,8 @@ const CORNER_RADIUS = 10;
 
 const spiralGraph = (configureJson, selector) => {
 	///
+	const startAngle = configureJson.startAngle || 0;
+	const endAngle = configureJson.endAngle || Math.PI * 2;
 	let startDate = configureJson.start;
 	let endDate = configureJson.end;
 	let targetStartDate = startDate;
@@ -237,8 +239,10 @@ const spiralGraph = (configureJson, selector) => {
 				if(d?.value) return d?.value;
 				else return 0;
 			});
+		console.log(2 * Math.PI, startAngle, endAngle,)
 		return d3.partition()
-			.size([2 * Math.PI - 0.15, 0])
+			// .size([2 * Math.PI, 0])
+			.size([endAngle - startAngle, 0])
 			.padding(padding)
 			(root);
 	}
@@ -298,7 +302,7 @@ const spiralGraph = (configureJson, selector) => {
 			depth: 0,
 			value: 1,
 			x0: 0,
-			x1: Math.PI * 2,
+			x1: endAngle - startAngle,
 			y0: 0,
 			y1: 0,
 			data:{
@@ -325,11 +329,12 @@ const spiralGraph = (configureJson, selector) => {
 		...items,
 	]
 	const dataContentRings = [];
+	const l = endAngle - startAngle;
 	configureJson.rings.data.items.forEach((item, index) => {
 			let x0 = 0, x1 = 1;
-			x0 = Math.max(0, Math.min(Math.PI * 2, Math.PI * 2 / (moment(configureJson.end).diff(moment(configureJson.start), 'days') + 1) * moment(item?.start).diff(moment(configureJson.start), 'days')));
-			if(x0 >= Math.PI * 2) x0 -= (Math.PI * 2)
-			x1 = Math.max(0, Math.min(Math.PI * 2, Math.PI * 2 / (moment(configureJson.end).diff(moment(configureJson.start), 'days') + 1) * (moment(item?.end).diff(moment(configureJson.start), 'days') +1) ))
+			x0 = Math.max(0, Math.min(l, l / (moment(configureJson.end).diff(moment(configureJson.start), 'days') + 1) * moment(item?.start).diff(moment(configureJson.start), 'days')));
+			if(x0 >= l) x0 -= (l)
+			x1 = Math.max(0, Math.min(l, l / (moment(configureJson.end).diff(moment(configureJson.start), 'days') + 1) * (moment(item?.end).diff(moment(configureJson.start), 'days') +1) ))
 			const type = item?.type;
 			let newData = {
 				title: item.title,
@@ -369,13 +374,14 @@ const spiralGraph = (configureJson, selector) => {
 		item.visible = item?.data?.visible || item.show, item.index = index
 	})
 
-	const startSpiralAngle = 0;
+	const startSpiralAngle = startAngle;
 	const format = d3.format(",d");
 	const width = parseFloat(d3.select(selector).attr("w"))
 
 	
 
 	var scaleLinear = d3.scaleLinear()
+			// .domain([0, Math.PI * 2])
 			.domain([0, Math.PI * 2])
 			.range([0,0.05])
 
@@ -518,6 +524,7 @@ const spiralGraph = (configureJson, selector) => {
 			// change to clockwise
 			let a = Math.PI * 2 - angle
 			// start from 12 o'clock
+			// a = a + Math.PI - (endAngle - startSpiralAngle);
 			a = a + Math.PI - startSpiralAngle;
 			return radius * Math.sin(a)
 	}
@@ -526,6 +533,7 @@ const spiralGraph = (configureJson, selector) => {
 			// change to clockwise
 			let a = Math.PI * 2 - angle
 			// start from 12 o'clock
+			// a = a + Math.PI - (endAngle - startSpiralAngle);
 			a = a + Math.PI - startSpiralAngle;
 			return radius * Math.cos(a)
 	}
@@ -592,6 +600,14 @@ const spiralGraph = (configureJson, selector) => {
 
 					// CURVE CONTROL POINTS
 		let arcData = {
+			// x1 : xPos(0.5 + startAngle, startInnerRadius),
+			// y1 : yPos(0.5 + startAngle, startInnerRadius),
+			// x2 : xPos(0.5 + endAngle, endInnerRadius),
+			// y2 : yPos(0.5 + endAngle, endInnerRadius),
+			// x3 : xPos(0.5 + endAngle, endOuterRadius),
+			// y3 : yPos(0.5 + endAngle, endOuterRadius),
+			// x4 : xPos(0.5 + startAngle, startOuterRadius),
+			// y4 : yPos(0.5 + startAngle, startOuterRadius),
 			x1 : xPos(startAngle, startInnerRadius),
 			y1 : yPos(startAngle, startInnerRadius),
 			x2 : xPos(endAngle, endInnerRadius),
@@ -606,7 +622,7 @@ const spiralGraph = (configureJson, selector) => {
 
 		for (let i = 1; i < controlPointCount; i++) {
 		// Calculate the current angle
-		const angle = startAngle + arcAngle * 1.0 / controlPointCount * i;
+		const angle =  startAngle + arcAngle * 1.0 / controlPointCount * i;
 			const outerAngule = endAngle - arcAngle * 1.0 / controlPointCount * i
 			// Determine the distance of the control point from the center
 			const innerDistance =  radius + scaleLinear(angle) * (radius - holeRadius);
@@ -707,8 +723,8 @@ const spiralGraph = (configureJson, selector) => {
 			if(type == "shadow") return "url(#myGradient)"
 			if(type != 'background'){
 				if(d?.color){ return d?.color;}
-				if(dateTypes.includes(d?.data?.type) || d?.data?.dataTitle) return '#ffffff26'; 
-				return color(type); 
+				if(dateTypes.includes(d?.data?.type) || d?.data?.dataTitle) return '#eee';
+				return color(type);
 			}else{
 				return "#FFFFFF36"
 			}
@@ -754,7 +770,8 @@ const spiralGraph = (configureJson, selector) => {
 		.attr("transform", d=>{
 			const type = d?.type || d?.data?.type; 
 			if(type =='shadow') 
-				return "rotate(225)"; 
+				// return "rotate(225)";
+				return `rotate(${2.5 + (startAngle - endAngle) * 360})`; // TODO remove magic 2.5
 			return "rotate(0)"
 		})
 		.style("cursor", "pointer")
